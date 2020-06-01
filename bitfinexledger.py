@@ -14,6 +14,7 @@ import sys
 import csv
 import pathlib
 import argparse
+import typing
 
 OW = r" on wallet (\w+)$"
 FLAGS = re.I
@@ -164,12 +165,18 @@ BITFINEX_RE = {
 DATE_RE = re.compile(r"^(?P<yy>\d\d)-(?P<mm>\d\d)-(?P<dd>\d\d) (?P<HH>\d\d):(?P<MM>\d\d):(?P<ss>\d\d)$")
 
 
-def load_file(file_name: pathlib.Path):
-    with pathlib.Path(file_name).open("r") as fil:
+def load_file(file_name: typing.Union[pathlib.Path, str]) -> typing.Iterator:
+    """
+    Loads a File
+    """
+    file = pathlib.Path(file_name).expanduser()
+    assert file.exists()
+    
+    with file.open("r") as fil:
         return load(fil)
 
 
-def load(stream):
+def load(stream: typing.Iterable) -> typing.Iterator:
     header = None
     reader = csv.reader(stream)
 
@@ -193,9 +200,8 @@ def load(stream):
                 break
 
         if not match:
-            print(f"{row}", file=sys.stderr)
+            print(f"Unable to Parse:\n{row}", file=sys.stderr)
             print(f"!!\n{memo}", file=sys.stderr)
-            sys.exit(1)
 
 
 def main():
@@ -217,7 +223,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # Reads the entire contents
+    # Reads the entire contents, use 'load' directly if the file is too big.
     records = list(load(args.source))
 
     if args.format == "yaml":
